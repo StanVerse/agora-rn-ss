@@ -1,118 +1,120 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import {
+  StackScreenProps,
+  createStackNavigator,
+} from '@react-navigation/stack';
+import React, { useEffect, useState } from 'react';
+import {
+  Keyboard,
   SafeAreaView,
-  ScrollView,
-  StatusBar,
+  SectionList,
   StyleSheet,
   Text,
-  useColorScheme,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
 import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  SDKBuildInfo,
+  createAgoraRtcEngine,
+  isDebuggable,
+  setDebuggable,
+} from 'react-native-agora';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+import Advanced from './src/examples/advanced';
+import Basic from './src/examples/basic';
+import Hooks from './src/examples/hook';
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+const RootStack = createStackNavigator<any>();
+
+const DATA = [Basic, Advanced, Hooks];
+
+export default function App() {
+  const [version, setVersion] = useState<SDKBuildInfo>({});
+
+  useEffect(() => {
+    const engine = createAgoraRtcEngine();
+    setVersion(engine.getVersion());
+  }, []);
+
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
+    <NavigationContainer>
+      <SafeAreaView
+        style={styles.container}
+        onStartShouldSetResponder={(_) => {
+          Keyboard.dismiss();
+          return false;
+        }}
+      >
+        <RootStack.Navigator screenOptions={{ gestureEnabled: false }}>
+          <RootStack.Screen name={'APIExample'} component={Home} />
+          {DATA.map((value) =>
+            value.data.map(({ name, component }) => {
+              return component ? (
+                <RootStack.Screen name={name} component={component} />
+              ) : undefined;
+            })
+          )}
+        </RootStack.Navigator>
+        <TouchableOpacity
+          onPress={() => {
+            setDebuggable(!isDebuggable());
+          }}
+        >
+          <Text style={styles.version}>
+            Powered by Agora RTC SDK {version.version} build {version.build}
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </NavigationContainer>
   );
 }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+const AppSectionList = SectionList<any>;
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
+const Home = ({ navigation }: StackScreenProps<any>) => {
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <AppSectionList
+      sections={DATA}
+      keyExtractor={(item, index) => item.name + index}
+      renderItem={({ item }) => <Item item={item} navigation={navigation} />}
+      renderSectionHeader={({ section: { title } }) => (
+        <Text style={styles.header}>{title}</Text>
+      )}
+    />
   );
-}
+};
+
+const Item = ({
+  item,
+  navigation,
+}: Omit<StackScreenProps<any>, 'route'> & { item: any }) => (
+  <View style={styles.item}>
+    <TouchableOpacity onPress={() => navigation.navigate(item.name)}>
+      <Text style={styles.title}>{item.name}</Text>
+    </TouchableOpacity>
+  </View>
+);
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
   },
-  sectionTitle: {
+  header: {
+    padding: 10,
     fontSize: 24,
-    fontWeight: '600',
+    color: 'white',
+    backgroundColor: 'grey',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  item: {
+    padding: 15,
   },
-  highlight: {
-    fontWeight: '700',
+  title: {
+    fontSize: 24,
+    color: 'black',
+  },
+  version: {
+    backgroundColor: '#ffffffdd',
+    textAlign: 'center',
   },
 });
-
-export default App;
